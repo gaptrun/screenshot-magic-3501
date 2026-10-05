@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 const NOMBRES = ["Luis Alberto", "Mariana", "Fernando", "Daniela", "Héctor", "Patricia"];
 const APELLIDOS = ["Gutiérrez Mora", "Pacheco Ruiz", "Villalobos Ríos", "Contreras León", "Escalona Briceño"];
-const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+const pick = (a: string[]): string => a[Math.floor(Math.random() * a.length)] ?? "";
 
 export function RegistroDialog({
   open,
@@ -91,7 +91,7 @@ export function RegistroDialog({
   }
 
   function handleFile(f?: File) {
-    if (!f || !f.type.startsWith("image/")) return toast.error("Seleccione una imagen válida");
+    if (!f || !f.type.startsWith("image/")) { toast.error("Seleccione una imagen válida"); return; }
     const r = new FileReader();
     r.onload = () => {
       const img = new Image();
@@ -141,7 +141,7 @@ export function RegistroDialog({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!ci || !nombres || !apellidos || !destino) return toast.error("Complete los campos obligatorios");
+    if (!ci || !nombres || !apellidos || !destino) { toast.error("Complete los campos obligatorios"); return; }
     const p = actions.upsertPersona({ ci, nombres, apellidos, rol_uma: rol, foto_url: foto });
     actions.registrar({
       persona_id: p.id,

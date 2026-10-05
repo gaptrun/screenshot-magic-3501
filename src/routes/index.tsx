@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
 });
 
 const hora = (s: string) => new Date(s).toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit" });
-const iniciales = (p?: Persona | undefined) => (p ? p.nombres[0] + p.apellidos[0] : "?");
+const iniciales = (p?: Persona | undefined) => (p ? (p.nombres[0] ?? "") + (p.apellidos[0] ?? "") : "?");
 
 function Dashboard() {
   const { personas, registros } = useUMA();
@@ -60,7 +60,7 @@ function Dashboard() {
     : [];
 
   function accesoRapido(p: Persona) {
-    if (enCampus.some((r) => r.persona_id === p.id)) return toast.info(`${p.nombres} ya está en el campus`);
+    if (enCampus.some((r) => r.persona_id === p.id)) { toast.info(`${p.nombres} ya está en el campus`); return; }
     if (p.rol_uma === "Visitante / Proveedor") {
       setInicial(p);
       setOpen(true);
