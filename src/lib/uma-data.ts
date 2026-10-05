@@ -14,7 +14,7 @@ export interface Persona {
   nombres: string;
   apellidos: string;
   rol_uma: RolUMA;
-  foto_url?: string;
+  foto_url?: string | undefined;
   creado_en: string;
 }
 

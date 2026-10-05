@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
 });
 
 const hora = (s: string) => new Date(s).toLocaleTimeString("es-VE", { hour: "2-digit", minute: "2-digit" });
-const iniciales = (p?: Persona) => (p ? p.nombres[0] + p.apellidos[0] : "?");
+const iniciales = (p?: Persona | undefined) => (p ? p.nombres[0] + p.apellidos[0] : "?");
 
 function Dashboard() {
   const { personas, registros } = useUMA();
@@ -256,7 +256,7 @@ function Dashboard() {
   );
 }
 
-function Avatar({ p }: { p?: Persona }) {
+function Avatar({ p }: { p?: Persona | undefined }) {
   return p?.foto_url ? (
     <img src={p.foto_url} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
   ) : (

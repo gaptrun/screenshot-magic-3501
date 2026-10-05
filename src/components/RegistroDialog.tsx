@@ -21,7 +21,7 @@ export function RegistroDialog({
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  inicial?: Persona | null;
+  inicial?: Persona | null | undefined;
 }) {
   const { personas } = useUMA();
   const [ci, setCi] = useState("");
