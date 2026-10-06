@@ -20,7 +20,7 @@ export const leerCedula = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data }): Promise<OcrResult> => {
-    const key = process.env.LOVABLE_API_KEY;
+    const key = process.env["LOVABLE_API_KEY"];
     if (!key) return { ok: false, error: "Falta la configuración del servicio de IA." };
     const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
