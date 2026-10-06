@@ -10,9 +10,7 @@ import { DEPARTAMENTOS, ROLES, type Estatus, type Persona, type RolUMA } from "@
 import { actions, useUMA } from "@/lib/uma-store";
 import { cn } from "@/lib/utils";
 
-const NOMBRES = ["Luis Alberto", "Mariana", "Fernando", "Daniela", "Héctor", "Patricia"];
-const APELLIDOS = ["Gutiérrez Mora", "Pacheco Ruiz", "Villalobos Ríos", "Contreras León", "Escalona Briceño"];
-const pick = (a: string[]): string => a[Math.floor(Math.random() * a.length)] ?? "";
+import { leerCedula } from "@/lib/ocr.functions";
 
 export function RegistroDialog({
   open,
@@ -81,13 +79,12 @@ export function RegistroDialog({
   function capture() {
     const v = videoRef.current;
     if (!v) return;
-    const c = document.createElement("canvas");
-    c.width = 320;
-    c.height = 240;
-    c.getContext("2d")!.drawImage(v, 0, 0, 320, 240);
-    const data = c.toDataURL("image/jpeg", 0.7);
+    const big = document.createElement("canvas");
+    big.width = v.videoWidth || 640;
+    big.height = v.videoHeight || 480;
+    big.getContext("2d")!.drawImage(v, 0, 0, big.width, big.height);
     stopCam();
-    processImage(data);
+    processImage(big);
   }
 
   function handleFile(f?: File) {
@@ -96,29 +93,39 @@ export function RegistroDialog({
     r.onload = () => {
       const img = new Image();
       img.onload = () => {
+        const scale = Math.min(1, 1600 / img.width);
         const c = document.createElement("canvas");
-        const scale = 320 / img.width;
-        c.width = 320;
+        c.width = img.width * scale;
         c.height = img.height * scale;
         c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-        processImage(c.toDataURL("image/jpeg", 0.7));
+        processImage(c);
       };
       img.src = r.result as string;
     };
     r.readAsDataURL(f);
   }
 
-  // OCR simulado: extrae datos en < 2 s
-  function processImage(data: string) {
-    setFoto(data);
+  // OCR real con IA
+  async function processImage(src: HTMLCanvasElement) {
+    const thumb = document.createElement("canvas");
+    thumb.width = 320;
+    thumb.height = Math.round((src.height * 320) / src.width);
+    thumb.getContext("2d")!.drawImage(src, 0, 0, thumb.width, thumb.height);
+    setFoto(thumb.toDataURL("image/jpeg", 0.7));
     setScanning(true);
-    setTimeout(() => {
-      setCi(String(Math.floor(10_000_000 + Math.random() * 20_000_000)));
-      setNombres(pick(NOMBRES));
-      setApellidos(pick(APELLIDOS));
-      setScanning(false);
+    try {
+      const r = await leerCedula({ data: { image: src.toDataURL("image/jpeg", 0.9) } });
+      if (!r.ok) { toast.error(r.error); return; }
+      if (!r.ci && !r.nombres && !r.apellidos) { toast.warning("No se pudo leer el documento. Complete manualmente."); return; }
+      if (r.ci) onCi(r.ci);
+      if (r.nombres) setNombres(r.nombres);
+      if (r.apellidos) setApellidos(r.apellidos);
       toast.success("Documento leído · campos autocompletados");
-    }, 1400);
+    } catch {
+      toast.error("Error al leer el documento. Complete manualmente.");
+    } finally {
+      setScanning(false);
+    }
   }
 
   const staff = personas.filter((p) => p.rol_uma !== "Visitante / Proveedor" && p.rol_uma !== "Alumno");
