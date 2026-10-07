@@ -14,7 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      departamentos: {
+        Row: {
+          activo: boolean
+          creado_en: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          creado_en?: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          creado_en?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
+      personas: {
+        Row: {
+          actualizado_en: string
+          apellidos: string
+          ci: string
+          correo: string | null
+          creado_en: string
+          foto_url: string | null
+          id: string
+          nombres: string
+          rol_uma: Database["public"]["Enums"]["rol_uma"]
+          telefono: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          apellidos: string
+          ci: string
+          correo?: string | null
+          creado_en?: string
+          foto_url?: string | null
+          id?: string
+          nombres: string
+          rol_uma?: Database["public"]["Enums"]["rol_uma"]
+          telefono?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          apellidos?: string
+          ci?: string
+          correo?: string | null
+          creado_en?: string
+          foto_url?: string | null
+          id?: string
+          nombres?: string
+          rol_uma?: Database["public"]["Enums"]["rol_uma"]
+          telefono?: string | null
+        }
+        Relationships: []
+      }
+      registros_acceso: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          creado_por_nombre: string
+          departamento_destino: string
+          estatus: Database["public"]["Enums"]["estatus_acceso"]
+          hora_ingreso: string
+          hora_salida: string | null
+          id: string
+          observaciones: string | null
+          persona_id: string
+          persona_recibe: string
+          tipo_acceso: Database["public"]["Enums"]["rol_uma"]
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          creado_por_nombre?: string
+          departamento_destino: string
+          estatus?: Database["public"]["Enums"]["estatus_acceso"]
+          hora_ingreso?: string
+          hora_salida?: string | null
+          id?: string
+          observaciones?: string | null
+          persona_id: string
+          persona_recibe?: string
+          tipo_acceso: Database["public"]["Enums"]["rol_uma"]
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          creado_por_nombre?: string
+          departamento_destino?: string
+          estatus?: Database["public"]["Enums"]["estatus_acceso"]
+          hora_ingreso?: string
+          hora_salida?: string | null
+          id?: string
+          observaciones?: string | null
+          persona_id?: string
+          persona_recibe?: string
+          tipo_acceso?: Database["public"]["Enums"]["rol_uma"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registros_acceso_persona_id_fkey"
+            columns: ["persona_id"]
+            isOneToOne: false
+            referencedRelation: "personas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +135,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      estatus_acceso: "Permitido" | "Denegado" | "En espera"
+      rol_uma:
+        | "Alumno"
+        | "Docente"
+        | "Personal Administrativo"
+        | "Directivo"
+        | "Personal de Apoyo"
+        | "Visitante / Proveedor"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +269,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      estatus_acceso: ["Permitido", "Denegado", "En espera"],
+      rol_uma: [
+        "Alumno",
+        "Docente",
+        "Personal Administrativo",
+        "Directivo",
+        "Personal de Apoyo",
+        "Visitante / Proveedor",
+      ],
+    },
   },
 } as const
