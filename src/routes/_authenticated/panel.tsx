@@ -1,18 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Search, UserPlus, Users, UserCheck, ShieldX, Clock, LogOut, Phone, Check, X, ScanLine, ShieldCheck, RotateCcw,
+  Search, UserPlus, Users, UserCheck, ShieldX, Clock, LogOut, Phone, Check, X, ScanLine, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { RegistroDialog } from "@/components/RegistroDialog";
-import { actions, useUMA } from "@/lib/uma-store";
+import { actions, run, useUMA } from "@/lib/uma-store";
+import { AppNav } from "@/components/AppNav";
 import { ROLES, type Estatus, type Persona, type RolUMA } from "@/lib/uma-data";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/panel")({
   head: () => ({
     meta: [
       { title: "Control de Acceso — Universidad Monteávila" },
@@ -30,7 +31,7 @@ const hora = (s: string) => new Date(s).toLocaleTimeString("es-VE", { hour: "2-d
 const iniciales = (p?: Persona | undefined) => (p ? (p.nombres[0] ?? "") + (p.apellidos[0] ?? "") : "?");
 
 function Dashboard() {
-  const { personas, registros } = useUMA();
+  const { personas, registros, loading } = useUMA();
   const [q, setQ] = useState("");
   const [filtro, setFiltro] = useState<RolUMA | "Todos">("Todos");
   const [open, setOpen] = useState(false);
@@ -65,8 +66,8 @@ function Dashboard() {
       setInicial(p);
       setOpen(true);
     } else {
-      actions.registrar({ persona_id: p.id, tipo_acceso: p.rol_uma, persona_recibe: "—", departamento_destino: "Campus", estatus: "Permitido" });
-      toast.success(`Acceso concedido · ${p.nombres} ${p.apellidos}`);
+      void run(() => actions.registrar({ persona_id: p.id, tipo_acceso: p.rol_uma, persona_recibe: "—", departamento_destino: "Campus", estatus: "Permitido" }), toast.error)
+        .then((r) => r !== undefined && toast.success(`Acceso concedido · ${p.nombres} ${p.apellidos}`));
     }
     setQ("");
   }
@@ -151,8 +152,8 @@ function Dashboard() {
                       <p className="font-medium">{p?.nombres} {p?.apellidos}</p>
                       <p className="truncate text-xs text-muted-foreground">Recibe: {r.persona_recibe} · {r.departamento_destino} · {hora(r.hora_ingreso)}</p>
                     </div>
-                    <Button size="sm" variant="success" onClick={() => { actions.setEstatus(r.id, "Permitido"); toast.success("Acceso concedido"); }}><Check /> Autorizar</Button>
-                    <Button size="icon" variant="outline" onClick={() => { actions.setEstatus(r.id, "Denegado"); toast.error("Acceso denegado"); }}><X /></Button>
+                    <Button size="sm" variant="success" onClick={() => void run(() => actions.setEstatus(r.id, "Permitido"), toast.error).then(() => toast.success("Acceso concedido"))}><Check /> Autorizar</Button>
+                    <Button size="icon" variant="outline" onClick={() => void run(() => actions.setEstatus(r.id, "Denegado"), toast.error).then(() => toast.error("Acceso denegado"))}><X /></Button>
                   </div>
                 );
               })}
@@ -185,7 +186,10 @@ function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {visibles.length === 0 && (
+                {loading && (
+                  <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Cargando…</td></tr>
+                )}
+                {!loading && visibles.length === 0 && (
                   <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Nadie en esta categoría ahora mismo.</td></tr>
                 )}
                 {visibles.map((r) => {
@@ -207,7 +211,7 @@ function Dashboard() {
                       <td className="px-4 py-3 tabular-nums">{hora(r.hora_ingreso)}</td>
                       <td className="px-4 py-3"><EstatusBadge s={r.estatus} /></td>
                       <td className="px-4 py-3 text-right">
-                        <Button size="sm" onClick={() => { actions.marcarSalida(r.id); toast(`Salida registrada · ${p?.nombres}`); }}>
+                        <Button size="sm" onClick={() => void run(() => actions.marcarSalida(r.id), toast.error).then(() => toast(`Salida registrada · ${p?.nombres}`))}>
                           <LogOut /> Marcar salida
                         </Button>
                       </td>
@@ -241,9 +245,6 @@ function Dashboard() {
             <Row k="Registros hoy" v={regHoy.length} />
             <Row k="Comunidad UMA en campus" v={enCampus.length - visitantes.length} />
             <Row k="Personas en base de datos" v={personas.length} />
-            <Button variant="outline" size="sm" className="mt-2 w-full" onClick={() => { actions.reset(); toast("Datos de prueba restaurados"); }}>
-              <RotateCcw /> Restaurar datos de prueba
-            </Button>
             <Button variant="ghost" size="sm" className="w-full" onClick={() => { setInicial(null); setOpen(true); }}>
               <UserPlus /> Registrar visitante
             </Button>

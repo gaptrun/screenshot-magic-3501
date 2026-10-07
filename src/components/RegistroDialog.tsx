@@ -147,7 +147,7 @@ export function RegistroDialog({
     }
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!ci || !nombres || !apellidos || !destino) { toast.error("Complete los campos obligatorios"); return; }
     setSaving(true);
