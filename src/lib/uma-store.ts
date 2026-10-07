@@ -1,102 +1,171 @@
 import { useSyncExternalStore } from "react";
-import {
-  MOCK_PERSONAS,
-  MOCK_REGISTROS,
-  type Estatus,
-  type Persona,
-  type RegistroAcceso,
-} from "./uma-data";
+import { supabase } from "@/integrations/supabase/client";
+import type { Estatus, Persona, RegistroAcceso, RolUMA } from "./uma-data";
+
+export interface Departamento {
+  id: string;
+  nombre: string;
+  activo: boolean;
+}
 
 interface State {
   personas: Persona[];
   registros: RegistroAcceso[];
+  departamentos: Departamento[];
+  loading: boolean;
 }
 
-const KEY = "uma-acceso-v1";
-let state: State = { personas: MOCK_PERSONAS, registros: MOCK_REGISTROS };
-let loaded = false;
+const empty: State = { personas: [], registros: [], departamentos: [], loading: true };
+let state: State = empty;
+let started = false;
 const listeners = new Set<() => void>();
 
-function load() {
-  if (loaded || typeof window === "undefined") return;
-  loaded = true;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) state = JSON.parse(raw);
-  } catch {
-    /* ignore */
-  }
-}
-
-function set(next: State) {
-  state = next;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {
-    /* quota (fotos) */
-  }
+function emit(next: Partial<State>) {
+  state = { ...state, ...next };
   listeners.forEach((l) => l());
 }
 
-const serverState: State = { personas: MOCK_PERSONAS, registros: MOCK_REGISTROS };
+function toPersona(r: any): Persona {
+  return { ...r, foto_url: r.foto_url ?? undefined };
+}
+
+export async function refresh() {
+  const [p, r, d] = await Promise.all([
+    supabase.from("personas").select("*").order("apellidos"),
+    supabase.from("registros_acceso").select("*").order("hora_ingreso", { ascending: false }).limit(500),
+    supabase.from("departamentos").select("id,nombre,activo").order("nombre"),
+  ]);
+  emit({
+    personas: (p.data ?? []).map(toPersona),
+    registros: (r.data ?? []) as RegistroAcceso[],
+    departamentos: (d.data ?? []) as Departamento[],
+    loading: false,
+  });
+}
+
+let timer: ReturnType<typeof setTimeout> | undefined;
+function scheduleRefresh() {
+  clearTimeout(timer);
+  timer = setTimeout(refresh, 250);
+}
+
+function start() {
+  if (started || typeof window === "undefined") return;
+  started = true;
+  refresh();
+  supabase
+    .channel("uma-cambios")
+    .on("postgres_changes", { event: "*", schema: "public", table: "personas" }, scheduleRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "registros_acceso" }, scheduleRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "departamentos" }, scheduleRefresh)
+    .subscribe();
+}
 
 export function useUMA() {
   return useSyncExternalStore(
     (l) => {
-      load();
+      start();
       listeners.add(l);
-      l();
       return () => listeners.delete(l);
     },
     () => state,
-    () => serverState,
+    () => empty,
   );
 }
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+function fail(error: { message: string } | null) {
+  if (error) throw new Error(error.message);
+}
+
+export type PersonaInput = {
+  ci: string;
+  nombres: string;
+  apellidos: string;
+  rol_uma: RolUMA;
+  foto_url?: string | undefined;
+  telefono?: string | null | undefined;
+  correo?: string | null | undefined;
+};
 
 export const actions = {
-  upsertPersona(p: Omit<Persona, "id" | "creado_en">): Persona {
+  async upsertPersona(p: PersonaInput): Promise<Persona> {
     const existing = state.personas.find((x) => x.ci === p.ci);
-    if (existing) {
-      const updated = { ...existing, ...p, foto_url: p.foto_url ?? existing.foto_url };
-      set({ ...state, personas: state.personas.map((x) => (x.id === existing.id ? updated : x)) });
-      return updated;
-    }
-    const nuevo: Persona = { ...p, id: uid(), creado_en: new Date().toISOString() };
-    set({ ...state, personas: [...state.personas, nuevo] });
-    return nuevo;
+    const payload = { ...p, foto_url: p.foto_url ?? existing?.foto_url ?? null };
+    const { data, error } = await supabase.from("personas").upsert(payload, { onConflict: "ci" }).select().single();
+    fail(error);
+    await refresh();
+    return toPersona(data);
   },
-  registrar(r: Omit<RegistroAcceso, "id" | "hora_ingreso" | "hora_salida" | "creado_por">) {
-    const reg: RegistroAcceso = {
+  async crearPersona(p: PersonaInput) {
+    const { error } = await supabase.from("personas").insert({ ...p, foto_url: p.foto_url ?? null });
+    fail(error);
+    await refresh();
+  },
+  async actualizarPersona(id: string, p: Partial<PersonaInput>) {
+    const { error } = await supabase.from("personas").update(p).eq("id", id);
+    fail(error);
+    await refresh();
+  },
+  async eliminarPersona(id: string) {
+    const { error } = await supabase.from("personas").delete().eq("id", id);
+    fail(error);
+    await refresh();
+  },
+  async registrar(r: { persona_id: string; tipo_acceso: RolUMA; persona_recibe: string; departamento_destino: string; estatus: Estatus }) {
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("registros_acceso").insert({
       ...r,
-      id: uid(),
-      hora_ingreso: new Date().toISOString(),
       hora_salida: r.estatus === "Denegado" ? new Date().toISOString() : null,
-      creado_por: "Recepción",
-    };
-    set({ ...state, registros: [reg, ...state.registros] });
-    return reg;
-  },
-  setEstatus(id: string, estatus: Estatus) {
-    set({
-      ...state,
-      registros: state.registros.map((r) =>
-        r.id === id
-          ? { ...r, estatus, hora_salida: estatus === "Denegado" ? new Date().toISOString() : r.hora_salida }
-          : r,
-      ),
+      creado_por_nombre: u.user?.email ?? "Recepción",
     });
+    fail(error);
+    await refresh();
   },
-  marcarSalida(id: string) {
-    set({
-      ...state,
-      registros: state.registros.map((r) =>
-        r.id === id ? { ...r, hora_salida: new Date().toISOString() } : r,
-      ),
-    });
+  async actualizarRegistro(id: string, r: Partial<Omit<RegistroAcceso, "id">>) {
+    const { error } = await supabase.from("registros_acceso").update(r).eq("id", id);
+    fail(error);
+    await refresh();
   },
-  reset() {
-    set({ personas: MOCK_PERSONAS, registros: MOCK_REGISTROS });
+  async eliminarRegistro(id: string) {
+    const { error } = await supabase.from("registros_acceso").delete().eq("id", id);
+    fail(error);
+    await refresh();
+  },
+  async setEstatus(id: string, estatus: Estatus) {
+    const patch: Record<string, unknown> = { estatus };
+    if (estatus === "Denegado") patch.hora_salida = new Date().toISOString();
+    const { error } = await supabase.from("registros_acceso").update(patch).eq("id", id);
+    fail(error);
+    await refresh();
+  },
+  async marcarSalida(id: string) {
+    const { error } = await supabase.from("registros_acceso").update({ hora_salida: new Date().toISOString() }).eq("id", id);
+    fail(error);
+    await refresh();
+  },
+  async crearDepartamento(nombre: string) {
+    const { error } = await supabase.from("departamentos").insert({ nombre });
+    fail(error);
+    await refresh();
+  },
+  async actualizarDepartamento(id: string, d: Partial<Omit<Departamento, "id">>) {
+    const { error } = await supabase.from("departamentos").update(d).eq("id", id);
+    fail(error);
+    await refresh();
+  },
+  async eliminarDepartamento(id: string) {
+    const { error } = await supabase.from("departamentos").delete().eq("id", id);
+    fail(error);
+    await refresh();
   },
 };
+
+/** Wraps an async action with toast-friendly error handling. */
+export async function run<T>(fn: () => Promise<T>, onError: (m: string) => void): Promise<T | undefined> {
+  try {
+    return await fn();
+  } catch (e) {
+    onError(e instanceof Error ? e.message : "Error inesperado");
+    return undefined;
+  }
+}
