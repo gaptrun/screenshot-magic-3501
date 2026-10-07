@@ -121,7 +121,8 @@ function Dashboard() {
             )}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <span className="hidden text-xs capitalize text-primary-foreground/70 lg:block">{clock}</span>
+            <span className="hidden text-xs capitalize text-primary-foreground/70 xl:block">{clock}</span>
+            <AppNav />
             <Button variant="secondary" onClick={() => { setInicial(null); setOpen(true); }}>
               <ScanLine /> Nuevo registro
             </Button>
