@@ -91,18 +91,18 @@ export const actions = {
   async upsertPersona(p: PersonaInput): Promise<Persona> {
     const existing = state.personas.find((x) => x.ci === p.ci);
     const payload = { ...p, foto_url: p.foto_url ?? existing?.foto_url ?? null };
-    const { data, error } = await supabase.from("personas").upsert(payload, { onConflict: "ci" }).select().single();
+    const { data, error } = await supabase.from("personas").upsert(payload as any, { onConflict: "ci" }).select().single();
     fail(error);
     await refresh();
     return toPersona(data);
   },
   async crearPersona(p: PersonaInput) {
-    const { error } = await supabase.from("personas").insert({ ...p, foto_url: p.foto_url ?? null });
+    const { error } = await supabase.from("personas").insert({ ...p, foto_url: p.foto_url ?? null } as any);
     fail(error);
     await refresh();
   },
   async actualizarPersona(id: string, p: Partial<PersonaInput>) {
-    const { error } = await supabase.from("personas").update(p).eq("id", id);
+    const { error } = await supabase.from("personas").update(p as any).eq("id", id);
     fail(error);
     await refresh();
   },
@@ -122,7 +122,7 @@ export const actions = {
     await refresh();
   },
   async actualizarRegistro(id: string, r: Partial<Omit<RegistroAcceso, "id">>) {
-    const { error } = await supabase.from("registros_acceso").update(r).eq("id", id);
+    const { error } = await supabase.from("registros_acceso").update(r as any).eq("id", id);
     fail(error);
     await refresh();
   },
@@ -132,7 +132,7 @@ export const actions = {
     await refresh();
   },
   async setEstatus(id: string, estatus: Estatus) {
-    const patch: Record<string, unknown> = { estatus };
+    const patch: { estatus: Estatus; hora_salida?: string } = { estatus };
     if (estatus === "Denegado") patch.hora_salida = new Date().toISOString();
     const { error } = await supabase.from("registros_acceso").update(patch).eq("id", id);
     fail(error);
