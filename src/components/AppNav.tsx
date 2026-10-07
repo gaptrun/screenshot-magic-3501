@@ -1,12 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Users, BarChart3, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
 const items = [
   { to: "/panel", label: "Panel", icon: LayoutDashboard },
   { to: "/personas", label: "Personas", icon: Users },
-  { to: "/reportes", label: "Reportes", icon: BarChart3 },
 ] as const;
 
 export function AppNav() {
