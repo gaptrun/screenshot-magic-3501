@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DEPARTAMENTOS, ROLES, type Estatus, type Persona, type RolUMA } from "@/lib/uma-data";
-import { actions, useUMA } from "@/lib/uma-store";
+import { ROLES, type Estatus, type Persona, type RolUMA } from "@/lib/uma-data";
+import { actions, run, useUMA } from "@/lib/uma-store";
 import { cn } from "@/lib/utils";
 
 import { leerCedula } from "@/lib/ocr.functions";
@@ -21,7 +21,8 @@ export function RegistroDialog({
   onOpenChange: (o: boolean) => void;
   inicial?: Persona | null | undefined;
 }) {
-  const { personas } = useUMA();
+  const { personas, departamentos } = useUMA();
+  const [saving, setSaving] = useState(false);
   const [ci, setCi] = useState("");
   const [nombres, setNombres] = useState("");
   const [apellidos, setApellidos] = useState("");
@@ -149,14 +150,20 @@ export function RegistroDialog({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!ci || !nombres || !apellidos || !destino) { toast.error("Complete los campos obligatorios"); return; }
-    const p = actions.upsertPersona({ ci, nombres, apellidos, rol_uma: rol, foto_url: foto });
-    actions.registrar({
-      persona_id: p.id,
-      tipo_acceso: rol,
-      persona_recibe: recibe || "—",
-      departamento_destino: destino,
-      estatus,
-    });
+    setSaving(true);
+    const ok = await run(async () => {
+      const p = await actions.upsertPersona({ ci, nombres, apellidos, rol_uma: rol, foto_url: foto });
+      await actions.registrar({
+        persona_id: p.id,
+        tipo_acceso: rol,
+        persona_recibe: recibe || "—",
+        departamento_destino: destino,
+        estatus,
+      });
+      return true;
+    }, (m) => toast.error(`No se pudo guardar: ${m}`));
+    setSaving(false);
+    if (!ok) return;
     toast.success(`${nombres} ${apellidos} · ${estatus}`);
     onOpenChange(false);
   }
@@ -285,7 +292,7 @@ export function RegistroDialog({
               <Select value={destino} onValueChange={setDestino}>
                 <SelectTrigger><SelectValue placeholder="Seleccione destino" /></SelectTrigger>
                 <SelectContent>
-                  {DEPARTAMENTOS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  {departamentos.filter((d) => d.activo).map((d) => <SelectItem key={d.id} value={d.nombre}>{d.nombre}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
@@ -313,8 +320,8 @@ export function RegistroDialog({
             </Field>
             <div className="flex justify-end gap-2 sm:col-span-2">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button type="submit" disabled={scanning}>
-                {scanning ? <Loader2 className="animate-spin" /> : <Check />} Registrar
+              <Button type="submit" disabled={scanning || saving}>
+                {scanning || saving ? <Loader2 className="animate-spin" /> : <Check />} Registrar
               </Button>
             </div>
           </div>
