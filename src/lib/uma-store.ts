@@ -116,7 +116,7 @@ export const actions = {
     const { error } = await supabase.from("registros_acceso").insert({
       ...r,
       hora_salida: r.estatus === "Denegado" ? new Date().toISOString() : null,
-      creado_por_nombre: u.user?.email ?? "Recepción",
+      creado_por_nombre: (u.user?.user_metadata?.usuario as string | undefined) ?? u.user?.email?.replace("@uma.local", "") ?? "Recepción",
     });
     fail(error);
     await refresh();

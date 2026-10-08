@@ -37,21 +37,21 @@ function AuthPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const usuario = email.trim().toLowerCase();
+    if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) {
+      toast.error("Usuario inválido: 3-30 caracteres (letras, números, . _ -)");
+      return;
+    }
+    const correo = `${usuario}@uma.local`;
     setBusy(true);
     if (modo === "in") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-      if (error) toast.error("Correo o contraseña incorrectos");
+      const { error } = await supabase.auth.signInWithPassword({ email: correo, password: pass });
+      if (error) toast.error("Usuario o contraseña incorrectos");
     } else {
-      const { data, error } = await supabase.auth.signUp({ email, password: pass, options: { emailRedirectTo: window.location.origin } });
-      if (error) toast.error(error.message);
-      else if (!data.session) toast.success("Revise su correo para confirmar la cuenta");
+      const { error } = await supabase.auth.signUp({ email: correo, password: pass, options: { data: { usuario } } });
+      if (error) toast.error(error.message.includes("registered") ? "Ese usuario ya existe" : error.message);
     }
     setBusy(false);
-  }
-
-  async function google() {
-    const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/auth" });
-    if (r.error) toast.error("No se pudo ingresar con Google");
   }
 
   return (
@@ -60,12 +60,12 @@ function AuthPage() {
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-primary font-bold text-primary-foreground">UMA</div>
           <h1 className="text-lg font-semibold">Control de Acceso</h1>
-          <p className="text-sm text-muted-foreground">{modo === "in" ? "Ingrese con su cuenta de personal" : "Cree su cuenta de personal"}</p>
+          <p className="text-sm text-muted-foreground">{modo === "in" ? "Ingrese con su usuario de personal" : "Cree su usuario de personal"}</p>
         </div>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email">Correo</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Label htmlFor="usuario">Usuario</Label>
+            <Input id="usuario" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pass">Contraseña</Label>
@@ -75,7 +75,6 @@ function AuthPage() {
             {busy && <Loader2 className="animate-spin" />} {modo === "in" ? "Ingresar" : "Crear cuenta"}
           </Button>
         </form>
-        <Button variant="outline" className="mt-3 w-full" onClick={google}>Continuar con Google</Button>
         <button className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground" onClick={() => setModo(modo === "in" ? "up" : "in")}>
           {modo === "in" ? "¿No tiene cuenta? Regístrese" : "¿Ya tiene cuenta? Ingrese"}
         </button>
