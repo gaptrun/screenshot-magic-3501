@@ -97,7 +97,7 @@ function ReportesPage() {
     if (depto !== "Todos") query = query.eq("departamento_destino", depto);
     const { data, error } = await query;
     setCargando(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setFilas((data ?? []) as unknown as Fila[]);
   }, [ini.getTime(), fin.getTime(), rol, estatus, depto]);
 
