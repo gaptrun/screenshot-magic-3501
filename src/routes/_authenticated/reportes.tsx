@@ -259,8 +259,9 @@ function ReportesPage() {
             <AlertDialogAction
               onClick={async () => {
                 if (!del) return;
-                const ok = await run(() => actions.eliminarRegistro(del.id), toast.error);
-                if (ok !== undefined || true) { toast.success("Registro eliminado"); cargar(); }
+                let ok = true;
+                await run(() => actions.eliminarRegistro(del.id), (m) => { ok = false; toast.error(m); });
+                if (ok) { toast.success("Registro eliminado"); cargar(); }
                 setDel(null);
               }}
             >Eliminar</AlertDialogAction>
