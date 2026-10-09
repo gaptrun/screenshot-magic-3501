@@ -111,7 +111,7 @@ export const actions = {
     fail(error);
     await refresh();
   },
-  async registrar(r: { persona_id: string; tipo_acceso: RolUMA; persona_recibe: string; departamento_destino: string; estatus: Estatus }) {
+  async registrar(r: { persona_id: string; tipo_acceso: RolUMA; persona_recibe: string; telefono_recibe?: string | null; departamento_destino: string; estatus: Estatus }) {
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("registros_acceso").insert({
       ...r,
