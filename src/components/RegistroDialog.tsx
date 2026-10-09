@@ -1,3 +1,4 @@
+import { aWhatsApp, enlaceWhatsApp } from "@/lib/whatsapp";
 import { useEffect, useRef, useState } from "react";
 import { Camera, Upload, ScanLine, Loader2, X, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ export function RegistroDialog({
   useEffect(() => {
     if (!open) return;
     setCi(inicial?.ci ?? "");
+    setTelRecibe("");
     setNombres(inicial?.nombres ?? "");
     setApellidos(inicial?.apellidos ?? "");
     setRol(inicial?.rol_uma ?? "Visitante / Proveedor");
