@@ -9,5 +9,5 @@ export function aWhatsApp(tel: string): string | null {
 }
 
 export function enlaceWhatsApp(numero: string, mensaje: string) {
-  return `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+  return `https://api.whatsapp.com/send?phone=${numero}&text=${encodeURIComponent(mensaje)}`;
 }
