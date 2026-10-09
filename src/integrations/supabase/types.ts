@@ -87,6 +87,7 @@ export type Database = {
           observaciones: string | null
           persona_id: string
           persona_recibe: string
+          telefono_recibe: string | null
           tipo_acceso: Database["public"]["Enums"]["rol_uma"]
         }
         Insert: {
@@ -101,6 +102,7 @@ export type Database = {
           observaciones?: string | null
           persona_id: string
           persona_recibe?: string
+          telefono_recibe?: string | null
           tipo_acceso: Database["public"]["Enums"]["rol_uma"]
         }
         Update: {
@@ -115,6 +117,7 @@ export type Database = {
           observaciones?: string | null
           persona_id?: string
           persona_recibe?: string
+          telefono_recibe?: string | null
           tipo_acceso?: Database["public"]["Enums"]["rol_uma"]
         }
         Relationships: [
