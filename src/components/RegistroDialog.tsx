@@ -1,3 +1,4 @@
+import { aWhatsApp, enlaceWhatsApp } from "@/lib/whatsapp";
 import { useEffect, useRef, useState } from "react";
 import { Camera, Upload, ScanLine, Loader2, X, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -28,6 +29,8 @@ export function RegistroDialog({
   const [apellidos, setApellidos] = useState("");
   const [rol, setRol] = useState<RolUMA>("Visitante / Proveedor");
   const [recibe, setRecibe] = useState("");
+  const [telRecibe, setTelRecibe] = useState("");
+  const [avisar, setAvisar] = useState(true);
   const [destino, setDestino] = useState("");
   const [foto, setFoto] = useState<string | undefined>();
   const [estatus, setEstatus] = useState<Estatus>("En espera");
@@ -42,6 +45,7 @@ export function RegistroDialog({
   useEffect(() => {
     if (!open) return;
     setCi(inicial?.ci ?? "");
+    setTelRecibe("");
     setNombres(inicial?.nombres ?? "");
     setApellidos(inicial?.apellidos ?? "");
     setRol(inicial?.rol_uma ?? "Visitante / Proveedor");
@@ -150,6 +154,10 @@ export function RegistroDialog({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!ci || !nombres || !apellidos || !destino) { toast.error("Complete los campos obligatorios"); return; }
+    const wa = telRecibe.trim() ? aWhatsApp(telRecibe) : null;
+    if (telRecibe.trim() && !wa) { toast.error("Teléfono inválido. Ej: 0414-1234567"); return; }
+    // Abrir la ventana antes de esperar, para que el navegador no la bloquee
+    const ventana = wa && avisar ? window.open("about:blank", "_blank") : null;
     setSaving(true);
     const ok = await run(async () => {
       const p = await actions.upsertPersona({ ci, nombres, apellidos, rol_uma: rol, foto_url: foto });
@@ -157,13 +165,18 @@ export function RegistroDialog({
         persona_id: p.id,
         tipo_acceso: rol,
         persona_recibe: recibe || "—",
+        telefono_recibe: wa,
         departamento_destino: destino,
         estatus,
       });
       return true;
     }, (m) => toast.error(`No se pudo guardar: ${m}`));
     setSaving(false);
-    if (!ok) return;
+    if (!ok) { ventana?.close(); return; }
+    if (ventana && wa) {
+      const msg = `Hola${recibe ? " " + recibe : ""}, le informamos desde Recepción de la Universidad Monteávila que ${nombres} ${apellidos} (C.I. ${ci}) lo espera en recepción. Destino: ${destino}.`;
+      ventana.location.href = enlaceWhatsApp(wa, msg);
+    }
     toast.success(`${nombres} ${apellidos} · ${estatus}`);
     onOpenChange(false);
   }
@@ -276,6 +289,7 @@ export function RegistroDialog({
                         type="button"
                         onMouseDown={() => {
                           setRecibe(`${p.nombres} ${p.apellidos}`);
+                          if (p.telefono) setTelRecibe(p.telefono);
                           setShowSug(false);
                         }}
                         className="flex w-full flex-col rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
@@ -287,6 +301,18 @@ export function RegistroDialog({
                   </div>
                 )}
               </div>
+            </Field>
+            <Field label="WhatsApp de quien recibe">
+              <Input
+                value={telRecibe}
+                onChange={(e) => setTelRecibe(e.target.value)}
+                placeholder="0414-1234567"
+                inputMode="tel"
+              />
+              <label className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+                <input type="checkbox" checked={avisar} onChange={(e) => setAvisar(e.target.checked)} />
+                Avisar por WhatsApp al guardar
+              </label>
             </Field>
             <Field label="Lugar / Departamento *">
               <Select value={destino} onValueChange={setDestino}>

@@ -1,0 +1,1 @@
+ALTER TABLE public.registros_acceso ADD COLUMN IF NOT EXISTS telefono_recibe text;
