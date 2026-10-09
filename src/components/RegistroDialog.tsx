@@ -156,8 +156,6 @@ export function RegistroDialog({
     if (!ci || !nombres || !apellidos || !destino) { toast.error("Complete los campos obligatorios"); return; }
     const wa = telRecibe.trim() ? aWhatsApp(telRecibe) : null;
     if (telRecibe.trim() && !wa) { toast.error("Teléfono inválido. Ej: 0414-1234567"); return; }
-    // Abrir la ventana antes de esperar, para que el navegador no la bloquee
-    const ventana = wa && avisar ? window.open("about:blank", "_blank") : null;
     setSaving(true);
     const ok = await run(async () => {
       const p = await actions.upsertPersona({ ci, nombres, apellidos, rol_uma: rol, foto_url: foto });
@@ -172,10 +170,14 @@ export function RegistroDialog({
       return true;
     }, (m) => toast.error(`No se pudo guardar: ${m}`));
     setSaving(false);
-    if (!ok) { ventana?.close(); return; }
-    if (ventana && wa) {
+    if (!ok) return;
+    if (wa && avisar) {
       const msg = `Hola${recibe ? " " + recibe : ""}, le informamos desde Recepción de la Universidad Monteávila que ${nombres} ${apellidos} (C.I. ${ci}) lo espera en recepción. Destino: ${destino}.`;
-      ventana.location.href = enlaceWhatsApp(wa, msg);
+      const url = enlaceWhatsApp(wa, msg);
+      toast("Aviso listo para WhatsApp", {
+        duration: 30000,
+        action: { label: "Enviar WhatsApp", onClick: () => { window.open(url, "_blank", "noopener,noreferrer"); } },
+      });
     }
     toast.success(`${nombres} ${apellidos} · ${estatus}`);
     onOpenChange(false);
