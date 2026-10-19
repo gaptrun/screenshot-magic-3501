@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      contactos_recepcion: {
+        Row: {
+          creado_en: string
+          id: string
+          nombre: string
+          nombre_clave: string | null
+          telefono: string | null
+        }
+        Insert: {
+          creado_en?: string
+          id?: string
+          nombre: string
+          nombre_clave?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          creado_en?: string
+          id?: string
+          nombre?: string
+          nombre_clave?: string | null
+          telefono?: string | null
+        }
+        Relationships: []
+      }
       departamentos: {
         Row: {
           activo: boolean

@@ -8,6 +8,13 @@
       "when": 1791551105584,
       "tag": "0000_telefono_recibe",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792446580310,
+      "tag": "0001_contactos_recepcion",
+      "breakpoints": true
     }
   ]
 }
