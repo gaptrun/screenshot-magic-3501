@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Estatus, Persona, RegistroAcceso, RolUMA } from "./uma-data";
+import { claveContacto, datosContacto, type ContactoRecepcion } from "./contactos";
 
 export interface Departamento {
   id: string;
@@ -12,10 +13,11 @@ interface State {
   personas: Persona[];
   registros: RegistroAcceso[];
   departamentos: Departamento[];
+  contactos: ContactoRecepcion[];
   loading: boolean;
 }
 
-const empty: State = { personas: [], registros: [], departamentos: [], loading: true };
+const empty: State = { personas: [], registros: [], departamentos: [], contactos: [], loading: true };
 let state: State = empty;
 let started = false;
 const listeners = new Set<() => void>();
@@ -30,15 +32,17 @@ function toPersona(r: any): Persona {
 }
 
 export async function refresh() {
-  const [p, r, d] = await Promise.all([
+  const [p, r, d, c] = await Promise.all([
     supabase.from("personas").select("*").order("apellidos"),
     supabase.from("registros_acceso").select("*").order("hora_ingreso", { ascending: false }).limit(500),
     supabase.from("departamentos").select("id,nombre,activo").order("nombre"),
+    supabase.from("contactos_recepcion").select("nombre,telefono").order("nombre"),
   ]);
   emit({
     personas: (p.data ?? []).map(toPersona),
     registros: (r.data ?? []) as RegistroAcceso[],
     departamentos: (d.data ?? []) as Departamento[],
+    contactos: c.data ?? state.contactos,
     loading: false,
   });
 }
@@ -58,6 +62,7 @@ function start() {
     .on("postgres_changes", { event: "*", schema: "public", table: "personas" }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "registros_acceso" }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "departamentos" }, scheduleRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "contactos_recepcion" }, scheduleRefresh)
     .subscribe();
 }
 
@@ -112,9 +117,23 @@ export const actions = {
     await refresh();
   },
   async registrar(r: { persona_id: string; tipo_acceso: RolUMA; persona_recibe: string; telefono_recibe?: string | null; departamento_destino: string; estatus: Estatus }) {
+    let contacto = datosContacto(r.persona_recibe, r.telefono_recibe);
+    if (contacto) {
+      const { data: anterior, error: lecturaError } = await supabase.from("contactos_recepcion")
+        .select("nombre,telefono").eq("nombre_clave", claveContacto(contacto.nombre)).maybeSingle();
+      fail(lecturaError);
+      contacto = datosContacto(r.persona_recibe, r.telefono_recibe, anterior ?? undefined);
+      if (contacto) {
+        const { error: contactoError } = await supabase.from("contactos_recepcion")
+          .upsert(contacto, { onConflict: "nombre_clave" });
+        fail(contactoError);
+      }
+    }
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("registros_acceso").insert({
       ...r,
+      persona_recibe: contacto?.nombre ?? r.persona_recibe,
+      telefono_recibe: contacto?.telefono ?? r.telefono_recibe ?? null,
       hora_salida: r.estatus === "Denegado" ? new Date().toISOString() : null,
       creado_por_nombre: (u.user?.user_metadata?.['usuario'] as string | undefined) ?? u.user?.email?.replace("@uma.local", "") ?? "Recepción",
     });

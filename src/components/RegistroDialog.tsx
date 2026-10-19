@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ROLES, type Estatus, type Persona, type RolUMA } from "@/lib/uma-data";
 import { actions, run, useUMA } from "@/lib/uma-store";
 import { cn } from "@/lib/utils";
+import { claveContacto, contactosDisponibles, type ContactoRecepcion } from "@/lib/contactos";
 
 import { leerCedula } from "@/lib/ocr.functions";
 
@@ -22,7 +23,7 @@ export function RegistroDialog({
   onOpenChange: (o: boolean) => void;
   inicial?: Persona | null | undefined;
 }) {
-  const { personas, departamentos } = useUMA();
+  const { personas, departamentos, contactos } = useUMA();
   const [saving, setSaving] = useState(false);
   const [ci, setCi] = useState("");
   const [nombres, setNombres] = useState("");
@@ -51,6 +52,7 @@ export function RegistroDialog({
     setRol(inicial?.rol_uma ?? "Visitante / Proveedor");
     setFoto(inicial?.foto_url);
     setRecibe("");
+    setShowSug(false);
     setDestino("");
     setEstatus(inicial && inicial.rol_uma !== "Visitante / Proveedor" ? "Permitido" : "En espera");
   }, [open, inicial]);
@@ -133,10 +135,21 @@ export function RegistroDialog({
     }
   }
 
-  const staff = personas.filter((p) => p.rol_uma !== "Visitante / Proveedor" && p.rol_uma !== "Alumno");
-  const sug = recibe
-    ? staff.filter((p) => `${p.nombres} ${p.apellidos}`.toLowerCase().includes(recibe.toLowerCase())).slice(0, 5)
-    : [];
+  const disponibles = contactosDisponibles(contactos, personas);
+  const sug = disponibles.filter((p) => claveContacto(p.nombre).includes(claveContacto(recibe))).slice(0, 5);
+
+  function elegirContacto(p: ContactoRecepcion) {
+    setRecibe(p.nombre);
+    setTelRecibe(p.telefono ?? "");
+    setShowSug(false);
+  }
+
+  function cambiarRecibe(nombre: string) {
+    setRecibe(nombre);
+    const existente = disponibles.find((p) => claveContacto(p.nombre) === claveContacto(nombre));
+    setTelRecibe(existente?.telefono ?? "");
+    setShowSug(true);
+  }
 
   // Autorrellenar si el CI existe
   function onCi(v: string) {
@@ -274,31 +287,28 @@ export function RegistroDialog({
             <Field label="Persona que lo recibe">
               <div className="relative">
                 <Input
+                  aria-label="Persona que lo recibe"
                   value={recibe}
-                  onChange={(e) => {
-                    setRecibe(e.target.value);
-                    setShowSug(true);
-                  }}
+                  onChange={(e) => cambiarRecibe(e.target.value)}
+                  onFocus={() => setShowSug(true)}
                   onBlur={() => setTimeout(() => setShowSug(false), 150)}
-                  placeholder="Buscar personal o docente"
+                   placeholder="Buscar o ingresar nombre"
                   autoComplete="off"
                 />
                 {showSug && sug.length > 0 && (
                   <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 shadow-md">
                     {sug.map((p) => (
-                      <button
-                        key={p.id}
+                      <Button
+                        key={claveContacto(p.nombre)}
                         type="button"
-                        onMouseDown={() => {
-                          setRecibe(`${p.nombres} ${p.apellidos}`);
-                          if (p.telefono) setTelRecibe(p.telefono);
-                          setShowSug(false);
-                        }}
-                        className="flex w-full flex-col rounded px-2 py-1.5 text-left text-sm hover:bg-accent"
+                        variant="ghost"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => elegirContacto(p)}
+                        className="flex h-auto w-full flex-col items-start rounded px-2 py-1.5 text-left text-sm"
                       >
-                        {p.nombres} {p.apellidos}
-                        <span className="text-xs text-muted-foreground">{p.rol_uma}</span>
-                      </button>
+                        {p.nombre}
+                        <span className="text-xs text-muted-foreground">{p.telefono ? `+${p.telefono}` : "Sin teléfono"}</span>
+                      </Button>
                     ))}
                   </div>
                 )}
@@ -306,6 +316,7 @@ export function RegistroDialog({
             </Field>
             <Field label="WhatsApp de quien recibe">
               <Input
+                aria-label="WhatsApp de quien recibe"
                 value={telRecibe}
                 onChange={(e) => setTelRecibe(e.target.value)}
                 placeholder="0414-1234567"
