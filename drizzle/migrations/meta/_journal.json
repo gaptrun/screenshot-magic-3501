@@ -15,6 +15,13 @@
       "when": 1792446580310,
       "tag": "0001_contactos_recepcion",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792446670849,
+      "tag": "0002_realtime_contactos_recepcion",
+      "breakpoints": true
     }
   ]
 }
