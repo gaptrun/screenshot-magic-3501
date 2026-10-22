@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedDatosRouteImport } from './routes/_authenticated/datos'
 import { Route as AuthenticatedPanelRouteImport } from './routes/_authenticated/panel'
 import { Route as AuthenticatedPersonasRouteImport } from './routes/_authenticated/personas'
 import { Route as AuthenticatedReportesRouteImport } from './routes/_authenticated/reportes'
@@ -29,6 +30,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedDatosRoute = AuthenticatedDatosRouteImport.update({
+  id: '/datos',
+  path: '/datos',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPanelRoute = AuthenticatedPanelRouteImport.update({
   id: '/panel',
@@ -49,6 +55,7 @@ const AuthenticatedReportesRoute = AuthenticatedReportesRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/datos': typeof AuthenticatedDatosRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/personas': typeof AuthenticatedPersonasRoute
   '/reportes': typeof AuthenticatedReportesRoute
@@ -56,6 +63,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/datos': typeof AuthenticatedDatosRoute
   '/panel': typeof AuthenticatedPanelRoute
   '/personas': typeof AuthenticatedPersonasRoute
   '/reportes': typeof AuthenticatedReportesRoute
@@ -65,20 +73,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/datos': typeof AuthenticatedDatosRoute
   '/_authenticated/panel': typeof AuthenticatedPanelRoute
   '/_authenticated/personas': typeof AuthenticatedPersonasRoute
   '/_authenticated/reportes': typeof AuthenticatedReportesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/panel' | '/personas' | '/reportes'
+  fullPaths: '/' | '/auth' | '/datos' | '/panel' | '/personas' | '/reportes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/panel' | '/personas' | '/reportes'
+  to: '/' | '/auth' | '/datos' | '/panel' | '/personas' | '/reportes'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/datos'
     | '/_authenticated/panel'
     | '/_authenticated/personas'
     | '/_authenticated/reportes'
@@ -113,6 +123,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/datos': {
+      id: '/_authenticated/datos'
+      path: '/datos'
+      fullPath: '/datos'
+      preLoaderRoute: typeof AuthenticatedDatosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/panel': {
       id: '/_authenticated/panel'
       path: '/panel'
@@ -138,12 +155,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDatosRoute: typeof AuthenticatedDatosRoute
   AuthenticatedPanelRoute: typeof AuthenticatedPanelRoute
   AuthenticatedPersonasRoute: typeof AuthenticatedPersonasRoute
   AuthenticatedReportesRoute: typeof AuthenticatedReportesRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDatosRoute: AuthenticatedDatosRoute,
   AuthenticatedPanelRoute: AuthenticatedPanelRoute,
   AuthenticatedPersonasRoute: AuthenticatedPersonasRoute,
   AuthenticatedReportesRoute: AuthenticatedReportesRoute,
