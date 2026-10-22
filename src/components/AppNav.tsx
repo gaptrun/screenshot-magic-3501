@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Users, LogOut, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, BarChart3, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
@@ -7,6 +7,7 @@ const items = [
   { to: "/panel", label: "Panel", icon: LayoutDashboard },
   { to: "/personas", label: "Personas", icon: Users },
   { to: "/reportes", label: "Reportes", icon: BarChart3 },
+  { to: "/datos", label: "Datos", icon: Database },
 ] as const;
 
 export function AppNav() {
@@ -17,6 +18,8 @@ export function AppNav() {
         <Link
           key={to}
           to={to}
+          title={label}
+          aria-label={label}
           className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-primary-foreground/75 transition hover:bg-primary-foreground/10 hover:text-primary-foreground"
           activeProps={{ className: "bg-primary-foreground/15 !text-primary-foreground" }}
         >
