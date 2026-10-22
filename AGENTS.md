@@ -11,3 +11,4 @@
 
 - Store reusable reception contacts separately from campus people; registration upserts by normalized name and preserves an existing phone when none is provided, so hosts need no CI or campus role.
 - Merge saved reception contacts with staff for registration suggestions; saved contact phones take precedence to reuse the most recently supplied number.
+- Keep record administration in the authenticated Datos module using the existing staff permissions; paginate database reads for complete exports and share schema validation between forms and file imports to prevent inconsistent writes.
